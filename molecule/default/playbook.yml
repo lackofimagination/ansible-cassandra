@@ -1,5 +1,8 @@
 ---
 - name: Converge
   hosts: all
+  become: true
+
   roles:
+    - role: ansible-java
     - role: ansible-cassandra

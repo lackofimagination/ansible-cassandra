@@ -1,0 +1,18 @@
+---
+- name: download cassandra
+  get_url:
+    url: '{{ cassandra_download_url }}'
+    dest: '/usr/local/src/cassandra-{{ cassandra_version }}.tar.gz'
+
+- name: unarchive tarball
+  unarchive:
+    src: '/usr/local/src/cassandra-{{ cassandra_version }}.tar.gz'
+    dest: '/opt/'
+    creates: '/opt/apache-cassandra-{{ cassandra_version }}'
+    copy: false
+
+- name: link install directory
+  file:
+    src: '/opt/apache-cassandra-{{ cassandra_version }}'
+    path: '{{ cassandra_install_dir }}'
+    state: link

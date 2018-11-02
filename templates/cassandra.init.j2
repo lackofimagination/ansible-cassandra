@@ -1,0 +1,50 @@
+#!/bin/bash
+
+set -e
+
+. /lib/lsb/init-functions
+
+NAME=cassandra-server
+PIDFILE={{ cassandra_pid_dir }}/cassandra-server.pid
+
+case "$1" in
+  start)
+    if [ -f $PIDFILE ]; then
+      status_of_proc -p "$PIDFILE" $EXEC "$NAME"
+    else
+      log_daemon_msg "Starting Cassandra server..."
+      if start-stop-daemon --start -q --oknodo -p "$PIDFILE" -c $CASSANDRAUSER --exec $EXEC -- "start"; then
+        log_end_msg 0
+      else
+        log_end_msg 1
+      fi
+    fi
+    ;;
+  stop)
+    if [ ! -f $PIDFILE ]; then
+      log_daemon_msg "$PIDFILE does not exist, process is not running"
+      log_end_msg 0
+    else
+      PID=$(cat "$PIDFILE")
+      log_daemon_msg "Stopping..."
+      while [ -x /proc/${PID} ]; do
+        log_daemon_msg "Waiting for Cassandra to shutdown..."
+        sleep 1
+      done
+
+      log_daemon_msg "Cassandra stopped"
+      log_end_msg 0
+    fi
+    ;;
+  status)
+    status_of_proc -p "$PIDFILE" $EXEC "$NAME"
+    ;;
+  restart)
+    $0 stop
+    $0 start
+    ;;
+  *)
+    echo "Usage: /etc/init.d/$NAME {start|stop|status|restart}" >&2
+    exit 1
+    ;;
+esac

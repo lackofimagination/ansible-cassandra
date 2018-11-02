@@ -1,0 +1,81 @@
+---
+- name: check if cassandra user exists
+  command: 'id {{ cassandra_user }}'
+  ignore_errors: true
+  changed_when: false
+  register: user_exists
+
+- name: add cassandra group
+  group:
+    name: '{{ cassandra_group }}'
+    state: present
+  when: user_exists is failed
+
+- name: add cassandra user
+  user:
+    name: '{{ cassandra_user }}'
+    group: '{{ cassandra_group }}'
+    comment: 'cassandra'
+    home: '{{ cassandra_install_dir }}'
+    shell: '/sbin/nologin'
+    system: false
+  when: user_exists is failed
+
+- name: create configuration directory
+  file:
+    path: '{{ cassandra_conf_dir }}'
+    state: directory
+    owner: root
+    group: root
+    mode: 0755
+
+- name: create data directory
+  file:
+    path: '{{ cassandra_data_dir }}'
+    state: directory
+    owner: '{{ cassandra_user }}'
+    group: '{{ cassandra_group }}'
+
+- name: create log directory
+  file:
+    path: '{{ cassandra_log_dir }}'
+    state: directory
+    owner: '{{ cassandra_user }}'
+    group: '{{ cassandra_group }}'
+
+- name: create pid directory
+  file:
+    path: '{{ cassandra_pid_dir }}'
+    state: directory
+    owner: '{{ cassandra_user }}'
+    group: '{{ cassandra_group }}'
+
+- name: ensure cassandra is running
+  service:
+    name: '{{ cassandra_daemon }}'
+    enabled: true
+    state: started
+
+- name: list cassandra main binaries
+  shell: 'ls -1 {{ cassandra_install_dir }}/bin | grep -v "\."'
+  register: cassandra_main_binaries
+  changed_when: false
+
+- name: list cassandra tool binaries
+  shell: 'ls -1 {{ cassandra_install_dir }}/tools/bin | grep -v "\."'
+  register: cassandra_tool_binaries
+  changed_when: false
+
+- name: add cassandra main binaries
+  alternatives:
+    name: '{{ item }}'
+    path: '{{ cassandra_install_dir }}/bin/{{ item }}'
+    link: '/usr/bin/{{ item }}'
+  with_items: '{{ cassandra_main_binaries.stdout_lines }}'
+
+- name: add cassandra tool binaries
+  alternatives:
+    name: '{{ item }}'
+    path: '{{ cassandra_install_dir }}/tools/bin/{{ item }}'
+    link: '/usr/bin/{{ item }}'
+  with_items: '{{ cassandra_tool_binaries.stdout_lines }}'
